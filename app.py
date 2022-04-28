@@ -12,7 +12,6 @@ model = joblib.load('model.pkl')
 def Home():
     return render_template('index.html')
 
-
 @app.route('/item-list', methods=['GET'])
 def item_list():
     if request.method == 'GET':
@@ -27,43 +26,34 @@ def item_list():
 
 
 
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['GET'])
 def predict():
     Fuel_Type_Diesel = 0
-    if request.method == 'POST':
-        Year = int(request.form['Year'])
-        Current_Price = float(request.form['Current_Price'])
-        Dist_Driven = np.log(int(request.form['Dist_Driven']))
-        Owner = int(request.form['Owner'])
-        Fuel_Type_Petrol = request.form['Fuel_Type_Petrol']
-        if(Fuel_Type_Petrol=='Petrol'):
-            Fuel_Type_Petrol=1
-        else:
-            Fuel_Type_Diesel=1
-            Fuel_Type_Petrol=0
-        Year = 2020-Year
-        Seller_Type_Individual = request.form['Seller_Type_Individual']
-        if(Seller_Type_Individual=='Individual'):
-            Seller_Type_Individual=1
-        else:
-            Seller_Type_Individual=0	
-        Transmission_Mannual=request.form['Transmission_Mannual']
-        if(Transmission_Mannual=='Mannual'):
-            Transmission_Mannual=1
-        else:
-            Transmission_Mannual=0
-        
-        #Prediction
-        prediction=model.predict([[Current_Price,Dist_Driven,Owner,Year,Fuel_Type_Diesel,Fuel_Type_Petrol,Seller_Type_Individual,Transmission_Mannual]])
-        output=round(prediction[0],2)
-        
-        #Output
-        if(output<0):
-            return render_template('index.html',prediction_text="Sorry, You cannot sell this car")
-        else:
-            return render_template('index.html',prediction_text="The current value of the car is {} lakhs.".format(output))
+    if request.method == 'GET':
+        item = request.args.get('item')
+
+        df = pd.read_csv('output_market_basket.csv')
+        df1 = df[['antecedents', 'consequents', 'support','confidence','lift']]
+
+        df2 = df1.loc[df['antecedents'] == item]
+        df2 = df2.sort_values(by='lift', ascending=False)
+
+        data = df2.to_dict('records')
+
+        temp = []
+        final_op = []
+
+        for i in data:
+            if i.get('consequents') in temp:
+                continue
+            final_op.append(i)
+
+            if len(final_op) > 4:
+                break
+
+        return {"data":final_op}
     else:
-        return render_template('index.html')
+        return []
 
 if __name__=="__main__":
     app.run(debug=True)
